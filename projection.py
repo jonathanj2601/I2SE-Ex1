@@ -86,7 +86,10 @@ def project(volume, plane, *, coverage=False):
     """
     rows, columns = plane.shape
     t = np.linspace(0.0, 1.0, rows)[:, None]
-    left = plane.start_left + t * (plane.end_left - plane.start_left)
+    leg = plane.end_left - plane.start_left
+    span = plane.end_right - plane.end_left
+    constant_width = np.array_equal(span, plane.start_right - plane.start_left)
+    left = plane.start_left + t * leg
     right = plane.start_right + t * (plane.end_right - plane.start_right)
     widths = np.linalg.norm(right - left, axis=1)
     counts = np.ceil(widths - 1e-9).astype(np.intp) + 1
@@ -96,23 +99,36 @@ def project(volume, plane, *, coverage=False):
     inside_count = 0
     # Bound the size of temporary arrays even for large sections.
     x = np.arange(columns)[None, :]
-    for start in range(0, rows, max(16, 131072 // columns)):
-        stop = min(start + max(16, 131072 // columns), rows)
+    block_rows = max(16, 131072 // columns)
+    for start in range(0, rows, block_rows):
+        stop = min(start + block_rows, rows)
         block = slice(start, stop)
-        sample = x - offsets[block, None]
-        last = counts[block, None] - 1
-        fraction = sample / np.maximum(last, 1)
-        valid = (sample >= 0) & (sample <= last)
+        if constant_width:
+            fraction = x / (columns - 1)
+            valid = np.ones((stop - start, columns), dtype=bool)
+        else:
+            sample = x - offsets[block, None]
+            last = counts[block, None] - 1
+            fraction = sample / np.maximum(last, 1)
+            valid = (sample >= 0) & (sample <= last)
         indices = []
         for axis, size in enumerate(volume.shape):
             origin = left[block, axis, None]
-            coordinate = origin + fraction * (right[block, axis, None] - origin)
-            index = np.floor(coordinate + 0.5).astype(np.intp)
+            if constant_width and span[axis] == 0:
+                coordinate = origin
+            elif constant_width and leg[axis] == 0:
+                coordinate = origin[:1] + fraction * span[axis]
+            else:
+                delta = span[axis] if constant_width else right[block, axis, None] - origin
+                coordinate = origin + fraction * delta
             valid &= (coordinate >= 0) & (coordinate <= size - 1)
+            index = np.floor(coordinate + 0.5).astype(np.intp)
+            np.clip(index, 0, size - 1, out=index)
             indices.append(index)
-        image[block][valid] = volume[tuple(index[valid] for index in indices)]
+        np.copyto(image[block], volume[tuple(indices)], where=valid)
         if coverage:
             inside_count += np.count_nonzero(valid)
     if coverage:
-        return image, inside_count, int(counts.sum())
+        total = rows * columns if constant_width else int(counts.sum())
+        return image, inside_count, total
     return image

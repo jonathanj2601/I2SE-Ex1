@@ -15,8 +15,9 @@ HEADER = ["Number of Points (3 or 4)"] + [
 def load_volume(path):
     # Inspect the header before decoding the potentially large voxel array.
     header = nrrd.read_header(str(path))
-    if header.get("dimension") != 3 or any(
-        not 1 <= size <= 1023 for size in header["sizes"]
+    sizes = header["sizes"]
+    if header.get("dimension") != 3 or len(sizes) != 3 or any(
+        not 1 <= size <= 1023 for size in sizes
     ):
         raise ValueError("Expected three NRRD dimensions in the range 1..1023")
     volume, _ = nrrd.read(str(path), index_order="F")
@@ -35,7 +36,7 @@ class PlaneRow:
 
 
 def parse_plane(fields):
-    if fields[0] not in ("3", "4"):
+    if not fields or fields[0] not in ("3", "4"):
         raise PlaneError("Point count must be 3 or 4")
     count = int(fields[0])
     expected = 1 + 3 * count
