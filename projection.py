@@ -88,7 +88,9 @@ def project(volume, plane, *, coverage=False):
     t = np.linspace(0.0, 1.0, rows)[:, None]
     leg = plane.end_left - plane.start_left
     span = plane.end_right - plane.end_left
-    constant_width = np.array_equal(span, plane.start_right - plane.start_left)
+    start_span = plane.start_right - plane.start_left
+    constant_width = np.array_equal(span, start_span)
+    row_only = (span == 0) & (start_span == 0)
     left = plane.start_left + t * leg
     right = plane.start_right + t * (plane.end_right - plane.start_right)
     widths = np.linalg.norm(right - left, axis=1)
@@ -114,7 +116,7 @@ def project(volume, plane, *, coverage=False):
         indices = []
         for axis, size in enumerate(volume.shape):
             origin = left[block, axis, None]
-            if constant_width and span[axis] == 0:
+            if row_only[axis]:
                 coordinate = origin
             elif constant_width and leg[axis] == 0:
                 coordinate = origin[:1] + fraction * span[axis]

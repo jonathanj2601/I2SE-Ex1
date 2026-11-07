@@ -24,9 +24,11 @@ def main():
                            (499, 0, 100), (499, 0, 499)])
     oblique = validate_plane([(0, 0, 0), (0, 0, 399),
                               (353, 353, 0), (353, 353, 399)])
+    triangle = validate_plane([(0, 249.5, 100), (431, 0, 100), (431, 499, 100)])
     print(f"{platform.platform()} | {platform.machine()} | {platform.processor()}")
     print(f"Python {platform.python_version()}, NumPy {np.__version__}")
-    for label, plane in (("Axis-aligned", axis), ("Oblique", oblique)):
+    for label, plane in (("Axis-aligned", axis), ("Oblique", oblique),
+                         ("Triangle", triangle)):
         for _ in range(10):
             project(volume, plane)
         start = perf_counter()

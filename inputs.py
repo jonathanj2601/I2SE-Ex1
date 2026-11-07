@@ -14,13 +14,16 @@ HEADER = ["Number of Points (3 or 4)"] + [
 
 def load_volume(path):
     # Inspect the header before decoding the potentially large voxel array.
-    header = nrrd.read_header(str(path))
-    sizes = header["sizes"]
-    if header.get("dimension") != 3 or len(sizes) != 3 or any(
-        not 1 <= size <= 1023 for size in sizes
-    ):
-        raise ValueError("Expected three NRRD dimensions in the range 1..1023")
-    volume, _ = nrrd.read(str(path), index_order="F")
+    try:
+        header = nrrd.read_header(str(path))
+        sizes = header.get("sizes", ())
+        if header.get("dimension") != 3 or len(sizes) != 3 or any(
+            not 1 <= size <= 1023 for size in sizes
+        ):
+            raise ValueError("Expected three NRRD dimensions in the range 1..1023")
+        volume, _ = nrrd.read(str(path), index_order="F")
+    except nrrd.NRRDError as exc:
+        raise ValueError(f"Invalid NRRD: {exc}") from exc
     if (volume.dtype.kind, volume.dtype.itemsize) not in {
         ("u", 1), ("u", 2), ("u", 4), ("i", 2)
     }:

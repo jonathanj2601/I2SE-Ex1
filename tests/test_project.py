@@ -111,6 +111,11 @@ class InputAndVideoTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load_volume(self.nrrd)
 
+    def test_rejects_malformed_nrrd(self):
+        self.nrrd.write_bytes(b"not an NRRD\n")
+        with self.assertRaisesRegex(ValueError, "Invalid NRRD"):
+            load_volume(self.nrrd)
+
     def test_csv_mixed_rows_and_recovery(self):
         self.write_csv([self.triangle, "", '"broken', "4,1,2", self.trapezoid])
         records = read_planes(self.csv)
