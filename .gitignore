@@ -1,0 +1,10 @@
+/.deps/
+/.venv/
+/outputs/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.mp4
+*.nrrd
+*.nhdr
+/I2SE_Exe1.docx.pdf
